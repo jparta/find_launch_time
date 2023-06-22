@@ -1,0 +1,5 @@
+astra @ git+https://github.com/jparta/astra_simulator@master
+eventlet
+geopandas
+ipykernel
+requests
