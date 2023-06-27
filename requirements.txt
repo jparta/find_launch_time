@@ -1,5 +1,10 @@
 astra @ git+https://github.com/jparta/astra_simulator@master
 eventlet
 geopandas
+geoplot
 ipykernel
+numpy
+OSMPythonTools
+pyarrow
 requests
+shapely

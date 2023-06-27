@@ -1,1 +1,5 @@
 astra_out/
+cache/
+*.osm.pbf
+*.sqlite
+*.feather
