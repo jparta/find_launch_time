@@ -1,5 +1,4 @@
 astra_out/
 cache/
-*.osm.pbf
-*.sqlite
-*.feather
+data/
+__pycache__/
