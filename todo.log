@@ -2,3 +2,5 @@
 
 - Treat water and other countries the same way as built areas
 - Make intersection faster by using Shapely STRTree
+- Use launch temperature from weather prediction for simulation input
+- Pre-download weather forecasts
