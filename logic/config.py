@@ -29,7 +29,7 @@ geofabrik_osm_column_types = {
 
 all_element_types = ['node', 'way', 'relation', 'area']
 
-built_area_tags = [
+bad_landing_tags = [
     ('landuse', 'residential'),
     ('landuse', 'commercial'),
     ('landuse', 'industrial'),
@@ -47,4 +47,4 @@ processing_crs = 'EPSG:3857'
 small_patch_of_Helsinki = (24.904289,60.178148,24.957504,60.194364)
 bbox = small_patch_of_Helsinki
 
-max_built_area_proportion = 0.15
+max_bad_landing_proportion = 0.15

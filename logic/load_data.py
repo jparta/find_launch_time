@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon, box
 
-from config import human_crs, processing_crs, built_area_tags, geofabrik_osm_column_types, bbox
+from config import human_crs, processing_crs, bad_landing_tags, geofabrik_osm_column_types, bbox
 
 
 data_location = Path(__file__).parent.parent / "data"
@@ -13,7 +13,7 @@ data_location = Path(__file__).parent.parent / "data"
 
 def apply_tag_conditions(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     conditions = None
-    for key, val in built_area_tags:
+    for key, val in bad_landing_tags:
         if key not in gdf.columns:
             continue
         cond = gdf[key] == val
@@ -41,22 +41,6 @@ def pare_gdf_to_essentials(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         if column in gdf.columns:
             gdf[column] = gdf[column].astype(dtype)
     gdf = apply_tag_conditions(gdf)
-    # limit to only the columns we need
-    """
-    osm_keys = list(set(a for a, b in built_area_tags))
-    other_columns_to_keep = ['name', 'table_name', 'geom', 'geometry']
-    columns_to_keep = osm_keys + other_columns_to_keep
-    print(f"Head of gdf before limiting columns:\n{gdf.head()}")
-    columns_to_drop = [column for column in gdf.columns if column not in columns_to_keep]
-    gdf = gdf.drop(columns_to_drop, axis=1)
-
-    # we're only interested in built areas, i.e. columns of interest are not null
-    if all(key in gdf.columns for key in osm_keys):
-        print(f"Head of gdf before dropping nulls:\n{gdf.head()}, length: {len(gdf)}")
-        gdf = gdf[gdf[osm_keys].notnull().any(axis=1)]
-        print(f"Head of gdf after dropping nulls:\n{gdf.head()}, length: {len(gdf)}")
-    """
-
     return gdf
 
 
@@ -98,7 +82,7 @@ def geometry_info(gdf: gpd.GeoDataFrame):
     print(f"top names and areas:\n{top_polys[show_columns_filtered]}")
 
 
-def load_osm_built_area_data() -> gpd.GeoSeries:
+def load_osm_bad_landing_data() -> gpd.GeoSeries:
     finland_osm_filepath = data_location / "finland.sqlite"
     finland_filepath = data_location / "finland_osm.feather"
     helsinki_filepath = data_location / "helsinki_osm.feather"
@@ -146,7 +130,7 @@ def load_osm_built_area_data() -> gpd.GeoSeries:
     print(output_gs.info(verbose=True, memory_usage='deep'))
     if not isinstance(output_gs, gpd.GeoSeries):
         raise TypeError(f"finland_osm_gs is not a GeoSeries, it is a {type(output_gs)}")
-    print("Loaded OSM data, returning from load_osm_built_area_data()")
+    print("Loaded OSM data")
     return output_gs
 
 

@@ -5,28 +5,24 @@ from astra.simulator import flight, forecastEnvironment
 import json
 import logging
 import tempfile
-import typing
 from datetime import datetime, timedelta
 from pathlib import Path
 from pprint import pformat, pprint
 
 import geopandas as gpd
-from matplotlib import pyplot as plt
-import numpy as np
 import requests
 
-from proportion_of_kde import get_proportion_of_built_area_in_kde
-from kde_tools import kde_gdf_from_points
+from proportion_of_kde import get_proportion_of_bad_landing_in_kde
 
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-days_to_launch = 1
-launch_datetime = datetime.now() + timedelta(days=days_to_launch)
-
-
-def make_launch_params(latitude: float, longitude: float):
+def make_launch_params(
+    latitude: float,
+    longitude: float,
+    launch_time: datetime,
+):
     elevation_dataset = "FABDEM"
     elevation_url = (
         f"https://api.elevationapi.com/api/Elevation?lat={latitude}&lon={longitude}&dataSet={elevation_dataset}"
@@ -37,7 +33,7 @@ def make_launch_params(latitude: float, longitude: float):
         "launchSiteLat": latitude,
         "launchSiteLon": longitude,
         "launchSiteElev": elevation,
-        "launchTime": launch_datetime,
+        "launchTime": launch_time,
         "inflationTemperature": 10,
         "forceNonHD": False,
     }
@@ -69,7 +65,28 @@ def make_flight_params(
     }
 
 
-def run_sims():
+def make_output_path():
+    output_dir = tempfile.TemporaryDirectory()
+    output_path = Path(output_dir.name) / 'astra_out'
+    return output_path
+
+
+def get_predicted_landing_sites(astra_flight_json_filepath: Path):
+    with open(astra_flight_json_filepath) as f:
+        flight_data = json.load(f)
+    landing_markers = flight_data["landingMarkers"]
+    lats = [marker["lat"] for marker in landing_markers]
+    lons = [marker["lon"] for marker in landing_markers]
+    predicted_landing_sites = gpd.GeoDataFrame(
+        geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326"
+    )
+    return predicted_landing_sites
+
+
+def run_sims(
+    launch_time: datetime,
+    output_path: Path,
+):
     launch_coords_possibilities = {
         "Kartanonrannan_koulu": (60.153144, 24.551671),
         "Vantinlaakso": (60.184101, 24.623690)
@@ -82,10 +99,8 @@ def run_sims():
     nozzle_lift_kg = 1.6
     parachute = "SFP800"
 
-    output_dir = tempfile.TemporaryDirectory()
-    output_path = Path(output_dir.name) / 'astra_out'
     output_formats = ('json',)
-    launch_params = make_launch_params(*launch_coords)
+    launch_params = make_launch_params(*launch_coords, launch_time)
     flight_params = make_flight_params(
         balloon=balloon,
         nozzle_lift_kg=nozzle_lift_kg,
@@ -109,22 +124,19 @@ def run_sims():
     return predicted_landing_sites
 
 
-def get_predicted_landing_sites(astra_flight_json_filepath: Path):
-    with open(astra_flight_json_filepath) as f:
-        flight_data = json.load(f)
-    landing_markers = flight_data["landingMarkers"]
-    lats = [marker["lat"] for marker in landing_markers]
-    lons = [marker["lon"] for marker in landing_markers]
-    predicted_landing_sites = gpd.GeoDataFrame(
-        geometry=gpd.points_from_xy(lons, lats), crs="EPSG:4326"
-    )
-    return predicted_landing_sites
-
 
 def main():
-    predicted_landing_sites = run_sims()
-    proportion_of_built_area = get_proportion_of_built_area_in_kde(predicted_landing_sites)
-    print(f"proportion of built area: {proportion_of_built_area}")
+    launch_time_min = datetime.now()
+    launch_time_max = launch_time_min + timedelta(days=10)
+    launch_time_increment = timedelta(hours=1)
+    launch_time = launch_time_min
+    while launch_time <= launch_time_max:
+        output_path = make_output_path()
+        run_sims(launch_time, output_path)
+        predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
+        proportion_of_bad_landing = get_proportion_of_bad_landing_in_kde(predicted_landing_sites)
+        print(f"proportion of bad landing area: {proportion_of_bad_landing}")
+        launch_time = datetime.now() + launch_time_increment
 
 
 if __name__ == "__main__":

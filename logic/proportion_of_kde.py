@@ -3,37 +3,35 @@ from matplotlib import pyplot as plt
 
 from config import processing_crs, human_crs
 from kde_tools import kde_gdf_from_points
-from load_data import load_osm_built_area_data
-from utils import get_single_polygon, poly_in_crs, plot_kde_and_built_area
+from load_data import load_osm_bad_landing_data
+from utils import get_single_geometry, poly_in_crs, plot_kde_and_bad_landing_polys
 
 
-def intersecting_built_area(kde_poly_gs, built_area_gs):
+def bad_landing_intersecting_with_kde(kde_poly_gs, bad_landing_gs):
     shared_crs = processing_crs
-    kde_multipoly = get_single_polygon(kde_poly_gs, out_crs=shared_crs)
-    print(f"number of vertices: {len(kde_multipoly.exterior.coords)}")
-    built_area_poly = get_single_polygon(built_area_gs, out_crs=shared_crs)
-    print(f"built_area_poly bounds: {poly_in_crs(built_area_poly, shared_crs, human_crs).bounds}")
-    print(f"kde_multipoly bounds: {poly_in_crs(kde_multipoly, shared_crs, human_crs).bounds}")
-    if not kde_multipoly.intersects(built_area_poly):
+    kde_geometry = get_single_geometry(kde_poly_gs, out_crs=shared_crs)
+    print(f"number of vertices: {len(kde_geometry.exterior.coords)}")
+    bad_landing_geometry = get_single_geometry(bad_landing_gs, out_crs=shared_crs)
+    print(f"bad landing geometry bounds: {poly_in_crs(bad_landing_geometry, shared_crs, human_crs).bounds}")
+    print(f"kde geometry bounds: {poly_in_crs(kde_geometry, shared_crs, human_crs).bounds}")
+    if not kde_geometry.intersects(bad_landing_geometry):
         return None
-    intersection_poly = kde_multipoly.intersection(built_area_poly)
-    intersection_gdf = gpd.GeoDataFrame(geometry=[intersection_poly], crs=kde_poly_gs.crs)
+    intersection_poly = kde_geometry.intersection(bad_landing_geometry)
+    intersection_gdf = gpd.GeoDataFrame(geometry=[intersection_poly], crs=shared_crs)
     return intersection_gdf
 
 
-def get_proportion_of_built_area_in_kde(points_gdf):
-    kde_poly_gdf = kde_gdf_from_points(points_gdf)
-    # trying to find extra plot
-    plt.show()
-    built_area_gs: gpd.GeoSeries = load_osm_built_area_data()
-    built_area_gs = built_area_gs.to_crs(processing_crs)
-    built_area_intersecting_with_kde = intersecting_built_area(kde_poly_gdf, built_area_gs)
-    proportion_of_built_area_to_whole = (built_area_intersecting_with_kde.area.sum() / kde_poly_gdf.area.sum()
-                                         if built_area_intersecting_with_kde is not None else 0)
-    plot_kde_and_built_area(
+def get_proportion_of_bad_landing_in_kde(points_gdf):
+    shared_crs = processing_crs
+    kde_poly_gdf = kde_gdf_from_points(points_gdf).to_crs(shared_crs)
+    bad_landing_gs: gpd.GeoSeries = load_osm_bad_landing_data()
+    bad_landing_in_kde = bad_landing_intersecting_with_kde(kde_poly_gdf, bad_landing_gs)
+    proportion_of_bad_landing_to_whole = (bad_landing_in_kde.to_crs(shared_crs).area.sum() / kde_poly_gdf.area.sum()
+                                         if bad_landing_in_kde is not None else 0)
+    plot_kde_and_bad_landing_polys(
         kde_poly_gdf,
-        built_area_intersecting_with_kde,
-        proportion_of_built_area_to_whole,
+        bad_landing_in_kde,
+        proportion_of_bad_landing_to_whole,
         points=points_gdf
     )
-    return proportion_of_built_area_to_whole
+    return proportion_of_bad_landing_to_whole

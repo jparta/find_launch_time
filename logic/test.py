@@ -3,7 +3,7 @@ import numpy as np
 from shapely.geometry import Polygon, Point
 
 from config import processing_crs, human_crs, bbox
-from proportion_of_kde import get_proportion_of_built_area_in_kde
+from proportion_of_kde import get_proportion_of_bad_landing_in_kde
 from kde_tools import kde_gdf_from_points
 from load_data import get_finland_polygon
 
@@ -52,8 +52,8 @@ def main():
         mean_point = Point(mean.x, mean.y)
         mean_in_processing_crs = gpd.GeoDataFrame(geometry=[mean_point], crs=human_crs).to_crs(processing_crs).geometry.values[0].coords[0]
         points = get_sampled_points(count_samples, mean_in_processing_crs, processing_crs)
-        proportion_of_built_area = get_proportion_of_built_area_in_kde(points_gdf=points)
-        print(f"proportion of built area: {proportion_of_built_area}")
+        proportion_of_bad_landing = get_proportion_of_bad_landing_in_kde(points_gdf=points)
+        print(f"proportion of bad landing: {proportion_of_bad_landing}")
 
 if __name__ == '__main__':
     main()
