@@ -52,9 +52,7 @@ def main():
         mean_point = Point(mean.x, mean.y)
         mean_in_processing_crs = gpd.GeoDataFrame(geometry=[mean_point], crs=human_crs).to_crs(processing_crs).geometry.values[0].coords[0]
         points = get_sampled_points(count_samples, mean_in_processing_crs, processing_crs)
-        kde_gdf = kde_gdf_from_points(points)
-        print(f"kde polygon average inter-point distance: {how_close_points_are_in_polygon(kde_gdf)}")
-        proportion_of_built_area = get_proportion_of_built_area_in_kde(kde_gdf)
+        proportion_of_built_area = get_proportion_of_built_area_in_kde(points_gdf=points)
         print(f"proportion of built area: {proportion_of_built_area}")
 
 if __name__ == '__main__':

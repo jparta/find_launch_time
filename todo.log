@@ -1,3 +1,4 @@
 
 
 - Treat water and other countries the same way as built areas
+- Make intersection faster by using Shapely STRTree

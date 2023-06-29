@@ -1,5 +1,6 @@
 import geopandas as gpd
 import geoplot as gplt
+from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib.path import Path
@@ -34,4 +35,7 @@ def kde_gdf_from_points(points: gpd.GeoDataFrame, proportion_of_distribution: fl
                 # Append polygon to list
                 polygons.append(poly)
     poly_gdf = gpd.GeoDataFrame(geometry=polygons, crs=points.crs)
+    # Close the KDE window so that it doesn't show up on the next plt.show() call
+    fig = kde_ax.get_figure()
+    plt.close(fig)
     return poly_gdf
