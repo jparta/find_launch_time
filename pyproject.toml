@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "find_launch_time"
+description = "find a suitable launch time for a high altitude balloon"
+readme = "README.rst"
+requires-python = ">=3.10"
+keywords = ["HAB", "high-altitude balloon", "launch time", "ASTRA"]
+#license = {text = "BSD 3-Clause License"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+	"astra @ git+https://github.com/jparta/astra_simulator@master",
+	"eventlet",
+	"geopandas",
+	"geoplot",
+	"ipykernel",
+	"numpy",
+	"OSMPythonTools",
+	"pyarrow",
+	"requests",
+	"setuptools",
+	"shapely",
+]
+dynamic = ["version"]
+
+# [project.optional-dependencies]
+
+# [project.scripts]
+
