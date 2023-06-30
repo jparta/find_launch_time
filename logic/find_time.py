@@ -1,18 +1,19 @@
 # Imports gevent, which does monkey patching. Import this first to avoid
 # troubles with other imports.
+import dataclasses
 from astra.simulator import flight, forecastEnvironment
 
 import json
 import logging
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pprint import pformat, pprint
 
 import geopandas as gpd
 import requests
 
-from proportion_of_kde import get_proportion_of_bad_landing_in_kde
+from proportion_of_kde import get_enhanced_ensemble_outputs
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -126,17 +127,18 @@ def run_sims(
 
 
 def main():
-    launch_time_min = datetime.now()
+    launch_time_min = datetime.now(timezone.utc)
     launch_time_max = launch_time_min + timedelta(days=10)
-    launch_time_increment = timedelta(hours=1)
+    launch_time_increment = timedelta(hours=24)
     launch_time = launch_time_min
     while launch_time <= launch_time_max:
         output_path = make_output_path()
         run_sims(launch_time, output_path)
         predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
-        proportion_of_bad_landing = get_proportion_of_bad_landing_in_kde(predicted_landing_sites)
-        print(f"proportion of bad landing area: {proportion_of_bad_landing}")
-        launch_time = datetime.now() + launch_time_increment
+        enhanced_outputs = get_enhanced_ensemble_outputs(predicted_landing_sites)
+        print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
+        pprint(enhanced_outputs.to_dict())
+        launch_time = launch_time + launch_time_increment
 
 
 if __name__ == "__main__":
