@@ -13,7 +13,7 @@ from pprint import pformat, pprint
 import geopandas as gpd
 import requests
 
-from proportion_of_kde import get_enhanced_ensemble_outputs
+from .proportion_of_kde import get_enhanced_ensemble_outputs
 
 
 logging.basicConfig(level=logging.DEBUG)

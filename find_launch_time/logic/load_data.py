@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon, box
 
-from config import human_crs, processing_crs, bad_landing_tags, geofabrik_osm_column_types, bbox
+from .config import human_crs, processing_crs, bad_landing_tags, geofabrik_osm_column_types, bbox
 
 
 data_location = Path(__file__).parent.parent / "data"

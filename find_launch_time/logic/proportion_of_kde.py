@@ -3,10 +3,10 @@ from pprint import pprint
 import geopandas as gpd
 from dataclasses import dataclass
 
-from config import processing_crs, human_crs
-from kde_tools import kde_gdf_from_points
-from load_data import load_osm_bad_landing_data
-from utils import get_single_geometry, poly_in_crs
+from .config import processing_crs, human_crs
+from .kde_tools import kde_gdf_from_points
+from .load_data import load_osm_bad_landing_data
+from .utils import get_single_geometry, poly_in_crs
 
 
 @dataclass

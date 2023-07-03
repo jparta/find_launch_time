@@ -1,7 +1,7 @@
 import geopandas as gpd
 from matplotlib import pyplot as plt
 
-from config import max_bad_landing_proportion, human_crs
+from .config import max_bad_landing_proportion, human_crs
 
 
 def get_single_geometry(gs: gpd.GeoSeries, out_crs=None):
