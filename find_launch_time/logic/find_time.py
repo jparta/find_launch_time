@@ -126,10 +126,11 @@ def run_sims(
 
 
 
-def main():
+def get_prediction_geometries():
+    """Get the geometries of the predicted landing sites for the next 10 days."""
     launch_time_min = datetime.now(timezone.utc)
     launch_time_max = launch_time_min + timedelta(days=10)
-    launch_time_increment = timedelta(hours=24)
+    launch_time_increment = timedelta(hours=1)
     launch_time = launch_time_min
     while launch_time <= launch_time_max:
         output_path = make_output_path()
@@ -137,9 +138,10 @@ def main():
         predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
         enhanced_outputs = get_enhanced_ensemble_outputs(predicted_landing_sites)
         print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
-        pprint(enhanced_outputs.to_dict())
+        #pprint(enhanced_outputs.to_dict())
+
         launch_time = launch_time + launch_time_increment
 
 
 if __name__ == "__main__":
-    main()
+    get_prediction_geometries()
