@@ -132,6 +132,7 @@ def get_prediction_geometries():
     launch_time_max = launch_time_min + timedelta(days=10)
     launch_time_increment = timedelta(hours=1)
     launch_time = launch_time_min
+    geometries = []
     while launch_time <= launch_time_max:
         output_path = make_output_path()
         run_sims(launch_time, output_path)
@@ -139,8 +140,9 @@ def get_prediction_geometries():
         enhanced_outputs = get_enhanced_ensemble_outputs(predicted_landing_sites)
         print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
         #pprint(enhanced_outputs.to_dict())
-
+        geometries.append(enhanced_outputs)
         launch_time = launch_time + launch_time_increment
+    return geometries
 
 
 if __name__ == "__main__":
