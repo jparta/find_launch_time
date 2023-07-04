@@ -13,7 +13,7 @@ from pprint import pformat, pprint
 import geopandas as gpd
 import requests
 
-from .proportion_of_kde import get_enhanced_ensemble_outputs
+from .proportion_of_kde import EnhancedEnsembleOutputs, get_enhanced_ensemble_outputs
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -132,7 +132,7 @@ def get_prediction_geometries():
     launch_time_max = launch_time_min + timedelta(days=10)
     launch_time_increment = timedelta(hours=1)
     launch_time = launch_time_min
-    geometries = []
+    geometries: list[EnhancedEnsembleOutputs] = []
     while launch_time <= launch_time_max:
         output_path = make_output_path()
         run_sims(launch_time, output_path)
