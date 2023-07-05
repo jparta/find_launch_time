@@ -41,6 +41,12 @@ bad_landing_tags = [
     ('building', '*'),
 ]
 
+bad_landing_tags_lists = {
+    'landuse': ['residential', 'commercial', 'industrial', 'retail', 'institutional', 'education', 'civil'],
+    'place': ['city_block'],
+    'building': True,
+}
+
 human_crs = 'EPSG:4326'
 processing_crs = 'EPSG:3857'
 

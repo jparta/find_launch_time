@@ -22,6 +22,7 @@ dependencies = [
 	"numpy",
 	"OSMPythonTools",
 	"pyarrow",
+	"pyrosm",
 	"requests",
 	"setuptools",
 	"shapely",

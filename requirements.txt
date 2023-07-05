@@ -6,5 +6,6 @@ ipykernel
 numpy
 OSMPythonTools
 pyarrow
+pyrosm
 requests
 shapely

@@ -5,10 +5,13 @@ from astra.simulator import flight, forecastEnvironment
 
 import json
 import logging
+import os
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from pprint import pformat, pprint
+
+os.environ['USE_PYGEOS'] = '0'
 
 import geopandas as gpd
 import requests
@@ -129,8 +132,8 @@ def run_sims(
 def get_prediction_geometries():
     """Get the geometries of the predicted landing sites for the next 10 days."""
     launch_time_min = datetime.now(timezone.utc)
-    launch_time_max = launch_time_min + timedelta(days=10)
-    launch_time_increment = timedelta(hours=1)
+    launch_time_max = launch_time_min + timedelta(days=1)
+    launch_time_increment = timedelta(hours=12)
     launch_time = launch_time_min
     geometries: list[EnhancedEnsembleOutputs] = []
     while launch_time <= launch_time_max:

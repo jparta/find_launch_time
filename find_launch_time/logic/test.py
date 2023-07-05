@@ -1,10 +1,14 @@
+import os
+
+os.environ['USE_PYGEOS'] = '0'
+
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon, Point
 
-from config import processing_crs, human_crs, bbox
-from proportion_of_kde import get_enhanced_ensemble_outputs
-from load_data import get_finland_polygon
+from .config import processing_crs, human_crs, bbox
+from .proportion_of_kde import get_enhanced_ensemble_outputs
+from .load_data import get_finland_polygon
 
 
 def get_sampled_points(count, mean, crs, cov=None) -> gpd.GeoDataFrame:

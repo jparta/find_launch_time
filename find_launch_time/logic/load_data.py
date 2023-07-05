@@ -1,14 +1,37 @@
+import logging
 import sqlite3
 from pathlib import Path
+import subprocess
+from zipfile import ZipFile
 
 import geopandas as gpd
 import pandas as pd
+import pyrosm
+import requests
 from shapely.geometry import Polygon, box
 
-from .config import human_crs, processing_crs, bad_landing_tags, geofabrik_osm_column_types, bbox
+from .config import human_crs, processing_crs, bad_landing_tags, bad_landing_tags_lists, geofabrik_osm_column_types, bbox
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 data_location = Path(__file__).parent.parent / "data"
+data_location.mkdir(exist_ok=True)
+
+data_files = {
+    "admin_0_countries_zip_filepath" : data_location / "ne_110m_admin_0_countries.zip",
+    "admin_0_countries_unzipped_filepath": data_location / "ne_110m_admin_0_countries",
+    "admin_0_countries_shp_filepath": data_location / "ne_110m_admin_0_countries" / "ne_110m_admin_0_countries.shp",
+    "osm_pbf": None,
+    "osm_sqlite": data_location / "osm.sqlite",
+    "osm_feather": data_location / "osm.feather",
+}
+
+data_files_needed = [
+    "admin_0_countries_shp_filepath",
+    "osm_feather",
+]
 
 
 def apply_tag_conditions(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -82,34 +105,101 @@ def geometry_info(gdf: gpd.GeoDataFrame):
     print(f"top names and areas:\n{top_polys[show_columns_filtered]}")
 
 
-def load_osm_bad_landing_data() -> gpd.GeoSeries:
-    finland_osm_filepath = data_location / "finland.sqlite"
-    finland_filepath = data_location / "finland_osm.feather"
-    helsinki_filepath = data_location / "helsinki_osm.feather"
+def log_sqlite_table_size(sqlite_filepath: Path, table_name: str):
+    conn = sqlite3.connect(sqlite_filepath)
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+    logging.info(f"table {table_name} has {cursor.fetchone()[0]} rows")
 
-    if Path(finland_filepath).is_file():
-        gdf = gpd.read_feather(finland_filepath)
-        finland_osm_gdf = pare_gdf_to_essentials(gdf)
+
+def data_ready() -> bool:
+    for data_file in data_files_needed:
+        filepath_raw = data_files[data_file]
+        if filepath_raw is None:
+            return False
+        filepath_obj = Path(filepath_raw)
+        if not filepath_obj.exists():
+            return False
+    return True
+
+
+def download_and_unzip_countries():
+    countries_110m_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
+    countries_110m_zip_filepath = data_files["admin_0_countries_zip_filepath"]
+    if countries_110m_zip_filepath.exists():
+        logging.info(f"countries shapefile already downloaded to {countries_110m_zip_filepath}")
+        return
+    resp = requests.get(countries_110m_url)
+    resp.raise_for_status()
+    with open(countries_110m_zip_filepath, 'wb') as f:
+        f.write(resp.content)
+    destination = data_files["admin_0_countries_unzipped_filepath"]
+    with ZipFile(countries_110m_zip_filepath, 'r') as zip_ref:
+        zip_ref.extractall(destination)
+    logging.info(f"Got countries shapefile from {countries_110m_url} and unzipped to {destination}")
+
+
+def sqlite_to_geodataframe(sqlite_filepath: Path) -> gpd.GeoDataFrame:
+    logging.info(f"converting sqlite file {sqlite_filepath} to geodataframe")
+    con = sqlite3.connect(sqlite_filepath)
+    geometries_of_interest = pd.DataFrame()
+    geom_types = ['multipolygons', 'other_relations']
+    for geom_type in geom_types:
+        print(f"Processing '{geom_type}'...")
+        df = pd.read_sql(f"SELECT *, '{geom_type}' AS table_name FROM {geom_type};", con)
+        geometries_of_interest = pd.concat([geometries_of_interest, df], ignore_index=True)
+    # convert dataframe into geodataframe
+    print("Creating geometry column")
+    geometries_of_interest['geometry'] = gpd.GeoSeries.from_wkt(geometries_of_interest['WKT_GEOMETRY'])
+    geometries_of_interest = gpd.GeoDataFrame(geometries_of_interest, crs=human_crs)
+    geometries_of_interest = pare_gdf_to_essentials(geometries_of_interest)
+    geometries_of_interest = heal_geometry(geometries_of_interest)
+    log_sqlite_table_size(sqlite_filepath, 'multipolygons')
+    logging.info(f"geometry_info(geometries_of_interest): {geometry_info(geometries_of_interest)}")
+    return geometries_of_interest
+
+
+def get_osm_in_feather_form():
+    osm_pbf_filepath = data_files['osm_pbf']
+    if not (osm_pbf_filepath and osm_pbf_filepath.exists()):
+        osm_pbf_filepath = pyrosm.get_data("Finland", directory=data_location, update=True)
+        data_files['osm_pbf'] = osm_pbf_filepath
+        logging.info(f"Downloaded osm_pbf to {osm_pbf_filepath}")
     else:
-        con = sqlite3.connect(finland_osm_filepath)
-        finland_osm_df = pd.DataFrame()
-        geom_types = ['multipolygons', 'other_relations']
-        for geom_type in geom_types:
-            print(f"Processing '{geom_type}'...")
-            df = pd.read_sql(f"SELECT *, '{geom_type}' AS table_name FROM {geom_type};", con)
-            finland_osm_df = pd.concat([finland_osm_df, df], ignore_index=True)
-        # convert dataframe into geodataframe
-        print("Creating geometry column")
-        finland_osm_df['geometry'] = gpd.GeoSeries.from_wkt(finland_osm_df['WKT_GEOMETRY'])
-        finland_osm_gdf = gpd.GeoDataFrame(finland_osm_df, crs=human_crs)
-        finland_osm_gdf = pare_gdf_to_essentials(finland_osm_gdf)
-        finland_osm_gdf = heal_geometry(finland_osm_gdf)
-        geometry_info(finland_osm_gdf)
-        finland_osm_gdf.to_feather(finland_filepath)
+        logging.info(f"Using existing osm_pbf_filepath: {osm_pbf_filepath}")
+    # convert to sqlite using ogr2ogr
+    osm_sqlite_filepath = data_files['osm_sqlite']
+    command = f"ogr2ogr -f SQLite -lco FORMAT=WKT {osm_sqlite_filepath} {osm_pbf_filepath}"
+    logging.info(f"converting osm pbf file to sqlite")
+    subprocess.run(command.split())
+    geometries_of_interest = sqlite_to_geodataframe(osm_sqlite_filepath)
+    geometries_of_interest.to_feather(data_files['osm_feather'])
+    logging.info(f"Converted {osm_pbf_filepath} to {data_files['osm_feather']}")
+
+
+def download_and_prepare_data():
+    download_and_unzip_countries()
+    get_osm_in_feather_form()
+    if not data_ready():
+        raise RuntimeError("Data not ready even though it should be.")
+
+
+def load_osm_bad_landing_data() -> gpd.GeoSeries:
+    if not data_ready():
+        logging.info("Data not ready. Getting files now")
+        download_and_prepare_data()
+        logging.info("Data ready")
+    osm_feather_filepath = data_files['osm_feather']
+
+    gdf = gpd.read_feather(osm_feather_filepath)
+    for column, dtype in geofabrik_osm_column_types.items():
+        if column in gdf.columns:
+            gdf[column] = gdf[column].astype(dtype)
 
     use_clipped_area = False
     if not use_clipped_area:
-        output_gs = finland_osm_gdf["geometry"]
+        output_gs = gdf["geometry"]
+    """
     elif Path(helsinki_filepath).is_file():
         print("Loading helsinki feather")
         helsinki_gdf = gpd.read_feather(helsinki_filepath)
@@ -119,13 +209,14 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
         print("Loaded helsinki feather")
     else:
         print("Loading Finland feather")
-        gdf = gpd.read_feather(finland_filepath)
+        gdf = gpd.read_feather(osm_feather_filepath)
         finland_osm_gdf = pare_gdf_to_essentials(gdf)
         print("Loaded Finland feather")
         geometry_info(finland_osm_gdf)
         helsinki_pared_gdf = clip_geometry_to_bbox(finland_osm_gdf, bbox, bbox_crs=human_crs)
         helsinki_pared_gdf.to_feather(helsinki_filepath)
         output_gs = helsinki_pared_gdf["geometry"]
+    """
     print("finland_osm_gs.info():")
     print(output_gs.info(verbose=True, memory_usage='deep'))
     if not isinstance(output_gs, gpd.GeoSeries):
@@ -135,8 +226,12 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
 
 
 def get_finland_polygon() -> Polygon:
+    if not data_ready():
+        logging.info("Data not ready. Getting files now")
+        download_and_prepare_data()
+        logging.info("Data ready")
     # Load Finland as a polygon
-    admin_0_countries_filepath = data_location / "ne_110m_admin_0_countries/ne_110m_admin_0_countries.shp"
+    admin_0_countries_filepath = data_files['admin_0_countries_shp_filepath']
     world = gpd.read_file(admin_0_countries_filepath)
     finland_polygon = world[world.ADMIN == "Finland"].geometry.values[0]
     return finland_polygon
