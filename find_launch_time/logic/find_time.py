@@ -129,11 +129,13 @@ def run_sims(
 
 
 
-def get_prediction_geometries():
+def get_prediction_geometries(
+    prediction_window_length: timedelta,
+    launch_time_increment: timedelta,
+    launch_time_min: datetime=datetime.now(timezone.utc)
+):
     """Get the geometries of the predicted landing sites for the next 10 days."""
-    launch_time_min = datetime.now(timezone.utc)
-    launch_time_max = launch_time_min + timedelta(days=1)
-    launch_time_increment = timedelta(hours=12)
+    launch_time_max = launch_time_min + prediction_window_length
     launch_time = launch_time_min
     geometries: list[EnhancedEnsembleOutputs] = []
     while launch_time <= launch_time_max:
@@ -149,4 +151,7 @@ def get_prediction_geometries():
 
 
 if __name__ == "__main__":
-    get_prediction_geometries()
+    get_prediction_geometries(
+        prediction_window_length=timedelta(days=10),
+        launch_time_increment=timedelta(days=1),
+    )
