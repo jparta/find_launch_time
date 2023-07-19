@@ -1,15 +1,13 @@
 import geopandas as gpd
 from matplotlib import pyplot as plt
 
+from shapely import geometry
+
 from .config import max_bad_landing_proportion, human_crs
 
 
-def get_single_geometry(gs: gpd.GeoSeries, out_crs=None):
-    geoms = gs.geometry
-    if len(geoms) == 1:
-        the_polygon = geoms[0]
-    else:
-        the_polygon = gs.unary_union
+def get_single_geometry(gs: gpd.GeoSeries, out_crs=None) -> geometry.base.BaseGeometry:
+    the_polygon = gs.unary_union
     if out_crs is None:
         return the_polygon
     else:
