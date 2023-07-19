@@ -227,14 +227,27 @@ def get_finland_polygon() -> Polygon:
 
 class DataLoader:
     def __init__(self) -> None:
+        self.bad_landing_sindex_by_crs = {}
         self.load_data()
 
+    def save_bad_landing_sindex(self, crs):
+        if crs in self.bad_landing_sindex_by_crs:
+            return
+        sindex = self.bad_landing_gs.to_crs(crs).sindex
+        self.bad_landing_sindex_by_crs[crs] = sindex
+
     def load_data(self):
-        self.bad_landing_gs = load_osm_bad_landing_data()
+        self.bad_landing_gs = load_osm_bad_landing_data().to_crs(processing_crs)
+        sindex_crs = {processing_crs}
         # Initialize spatial index
-        self.bad_landing_gs_sindex = self.bad_landing_gs.sindex
+        for crs in sindex_crs:
+            self.save_bad_landing_sindex(crs)
         self.finland_polygon = get_finland_polygon()
 
+    def get_bad_landing_sindex(self, crs) -> gpd.GeoSeries:
+        if crs not in self.bad_landing_sindex_by_crs:
+            self.save_bad_landing_sindex(crs)
+        return self.bad_landing_sindex_by_crs[crs]
 
     def refresh_data(self):
         wipe_data()
