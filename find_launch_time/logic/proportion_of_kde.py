@@ -30,13 +30,15 @@ class EnhancedEnsembleOutputs:
 
 
 def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
-    shared_crs = processing_crs
-    kde_geometry = get_single_geometry(kde_poly_gs, out_crs=shared_crs)
-    print(f"number of vertices: {len(kde_geometry.exterior.coords)}")
+    kde_simplify_tolerance = 10  # meters
+    kde_geometry = get_single_geometry(kde_poly_gs, out_crs=processing_crs)
+    simplified_kde_geometry = kde_geometry.simplify(kde_simplify_tolerance)
+    # print(f"number of vertices: {len(kde_geometry.exterior.coords)}")
     # bad_landing_geometry = get_single_geometry(bad_landing_gs, out_crs=shared_crs)
     # print(f"bad landing geometry bounds: {poly_in_crs(bad_landing_geometry, shared_crs, human_crs).bounds}")
-    print(f"kde geometry bounds: {poly_in_crs(kde_geometry, shared_crs, human_crs).bounds}")
-    intersecting = data_loader.bad_landing_gs_sindex.query(kde_geometry, predicate="intersects")
+    print(f"kde geometry bounds: {poly_in_crs(simplified_kde_geometry, processing_crs, human_crs).bounds}")
+    bad_landing_sindex = data_loader.get_bad_landing_sindex(processing_crs)
+    intersecting = bad_landing_sindex.query(simplified_kde_geometry, predicate="intersects")
     if not intersecting:
         return None
     intersection_gdf = data_loader.bad_landing_gs.iloc[intersecting].copy()
