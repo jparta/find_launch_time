@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from .config import processing_crs, human_crs
 from .kde_tools import kde_gdf_from_points
-from .load_data import load_osm_bad_landing_data
+from .load_data import DataLoader
 from .utils import get_single_geometry, poly_in_crs
 
 
@@ -43,7 +43,7 @@ def bad_landing_intersecting_with_kde(kde_poly_gs, bad_landing_gs):
     return intersection_gdf
 
 
-def get_enhanced_ensemble_outputs(points_gdf) -> EnhancedEnsembleOutputs:
+def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> EnhancedEnsembleOutputs:
     """Generate a Kernel Density Estimate (KDE) from the estimated landing location points,
     and compare it with the bad landing polygons. Return the whole package of outputs,
     including the points passed to this function, their KDE, the proportion of bad landing area to KDE area,
@@ -51,7 +51,7 @@ def get_enhanced_ensemble_outputs(points_gdf) -> EnhancedEnsembleOutputs:
     """
     shared_crs = processing_crs
     kde_gdf = kde_gdf_from_points(points_gdf).to_crs(shared_crs)
-    bad_landing_gs: gpd.GeoSeries = load_osm_bad_landing_data()
+    bad_landing_gs: gpd.GeoSeries = data_loader.bad_landing_gs
     bad_landing_in_kde = bad_landing_intersecting_with_kde(kde_gdf, bad_landing_gs)
     proportion_of_bad_landing_to_whole = (bad_landing_in_kde.to_crs(shared_crs).area.sum() / kde_gdf.area.sum()
                                          if bad_landing_in_kde is not None else 0)

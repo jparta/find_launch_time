@@ -1,4 +1,5 @@
 import logging
+import shutil
 import sqlite3
 from pathlib import Path
 import subprocess
@@ -112,6 +113,13 @@ def log_sqlite_table_size(sqlite_filepath: Path, table_name: str):
     logging.info(f"table {table_name} has {cursor.fetchone()[0]} rows")
 
 
+def wipe_data():
+    try:
+        shutil.rmtree(data_location)
+    except FileNotFoundError:
+        pass
+
+
 def data_ready() -> bool:
     for data_file in data_files_needed:
         filepath_raw = data_files[data_file]
@@ -196,27 +204,7 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
         if column in gdf.columns:
             gdf[column] = gdf[column].astype(dtype)
 
-    use_clipped_area = False
-    if not use_clipped_area:
-        output_gs = gdf["geometry"]
-    """
-    elif Path(helsinki_filepath).is_file():
-        print("Loading helsinki feather")
-        helsinki_gdf = gpd.read_feather(helsinki_filepath)
-        helsinki_pared_gdf = pare_gdf_to_essentials(helsinki_gdf)
-        output_gs = helsinki_pared_gdf["geometry"]
-        # geometry_info(finland_osm_gs)
-        print("Loaded helsinki feather")
-    else:
-        print("Loading Finland feather")
-        gdf = gpd.read_feather(osm_feather_filepath)
-        finland_osm_gdf = pare_gdf_to_essentials(gdf)
-        print("Loaded Finland feather")
-        geometry_info(finland_osm_gdf)
-        helsinki_pared_gdf = clip_geometry_to_bbox(finland_osm_gdf, bbox, bbox_crs=human_crs)
-        helsinki_pared_gdf.to_feather(helsinki_filepath)
-        output_gs = helsinki_pared_gdf["geometry"]
-    """
+    output_gs = gdf["geometry"]
     print("finland_osm_gs.info():")
     print(output_gs.info(verbose=True, memory_usage='deep'))
     if not isinstance(output_gs, gpd.GeoSeries):
@@ -235,3 +223,17 @@ def get_finland_polygon() -> Polygon:
     world = gpd.read_file(admin_0_countries_filepath)
     finland_polygon = world[world.ADMIN == "Finland"].geometry.values[0]
     return finland_polygon
+
+
+class DataLoader:
+    def __init__(self) -> None:
+        self.load_data()
+
+    def load_data(self):
+        self.bad_landing_gs = load_osm_bad_landing_data()
+        self.finland_polygon = get_finland_polygon()
+
+    def refresh_data(self):
+        wipe_data()
+        self.load_data()
+

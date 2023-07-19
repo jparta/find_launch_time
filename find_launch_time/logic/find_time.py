@@ -16,6 +16,7 @@ os.environ['USE_PYGEOS'] = '0'
 import geopandas as gpd
 import requests
 
+from .load_data import DataLoader
 from .proportion_of_kde import EnhancedEnsembleOutputs, get_enhanced_ensemble_outputs
 
 
@@ -129,24 +130,34 @@ def run_sims(
     return predicted_landing_sites
 
 
-def get_prediction_geometries(
-    prediction_window_length: timedelta,
-    launch_time_increment: timedelta,
-    launch_time_min: datetime=datetime.now(timezone.utc),
-    debug: bool = False,
-):
-    """Get the geometries of the predicted landing sites for the next 10 days."""
-    launch_time_max = launch_time_min + prediction_window_length
-    launch_time = launch_time_min
-    while launch_time <= launch_time_max:
-        output_path = make_output_path()
-        run_sims(launch_time, output_path, debug)
-        predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
-        enhanced_outputs = get_enhanced_ensemble_outputs(predicted_landing_sites)
-        print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
-        #pprint(enhanced_outputs.to_dict())
-        yield enhanced_outputs
-        launch_time = launch_time + launch_time_increment
+class FindTime:
+    def __init__(self, debug: bool = False):
+        self.debug = debug
+        self.data_loader = DataLoader()
+
+    def get_prediction_geometries(
+        self,
+        prediction_window_length: timedelta,
+        launch_time_increment: timedelta,
+        launch_time_min: datetime=datetime.now(timezone.utc),
+    ):
+        """Get the geometries of the predicted landing sites for the next 10 days."""
+        launch_time_max = launch_time_min + prediction_window_length
+        launch_time = launch_time_min
+        while launch_time <= launch_time_max:
+            output_path = make_output_path()
+            run_sims(launch_time, output_path, self.debug)
+            predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
+            enhanced_outputs = get_enhanced_ensemble_outputs(
+                predicted_landing_sites,
+                self.data_loader,
+            )
+            print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
+            yield enhanced_outputs
+            launch_time = launch_time + launch_time_increment
+
+    def refresh_data(self):
+        self.data_loader.refresh_data()
 
 
 if __name__ == "__main__":
