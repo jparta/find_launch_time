@@ -29,17 +29,17 @@ class EnhancedEnsembleOutputs:
         return final_format_dict
 
 
-def bad_landing_intersecting_with_kde(kde_poly_gs, bad_landing_gs):
+def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
     shared_crs = processing_crs
     kde_geometry = get_single_geometry(kde_poly_gs, out_crs=shared_crs)
     print(f"number of vertices: {len(kde_geometry.exterior.coords)}")
-    bad_landing_geometry = get_single_geometry(bad_landing_gs, out_crs=shared_crs)
-    print(f"bad landing geometry bounds: {poly_in_crs(bad_landing_geometry, shared_crs, human_crs).bounds}")
+    # bad_landing_geometry = get_single_geometry(bad_landing_gs, out_crs=shared_crs)
+    # print(f"bad landing geometry bounds: {poly_in_crs(bad_landing_geometry, shared_crs, human_crs).bounds}")
     print(f"kde geometry bounds: {poly_in_crs(kde_geometry, shared_crs, human_crs).bounds}")
-    if not kde_geometry.intersects(bad_landing_geometry):
+    intersecting = data_loader.bad_landing_gs_sindex.query(kde_geometry, predicate="intersects")
+    if not intersecting:
         return None
-    intersection_poly = kde_geometry.intersection(bad_landing_geometry)
-    intersection_gdf = gpd.GeoDataFrame(geometry=[intersection_poly], crs=shared_crs)
+    intersection_gdf = data_loader.bad_landing_gs.iloc[intersecting].copy()
     return intersection_gdf
 
 
@@ -51,8 +51,7 @@ def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> Enhanc
     """
     shared_crs = processing_crs
     kde_gdf = kde_gdf_from_points(points_gdf).to_crs(shared_crs)
-    bad_landing_gs: gpd.GeoSeries = data_loader.bad_landing_gs
-    bad_landing_in_kde = bad_landing_intersecting_with_kde(kde_gdf, bad_landing_gs)
+    bad_landing_in_kde = bad_landing_intersecting_with_kde(kde_gdf, data_loader)
     proportion_of_bad_landing_to_whole = (bad_landing_in_kde.to_crs(shared_crs).area.sum() / kde_gdf.area.sum()
                                          if bad_landing_in_kde is not None else 0)
     """

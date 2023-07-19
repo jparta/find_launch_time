@@ -231,7 +231,10 @@ class DataLoader:
 
     def load_data(self):
         self.bad_landing_gs = load_osm_bad_landing_data()
+        # Initialize spatial index
+        self.bad_landing_gs_sindex = self.bad_landing_gs.sindex
         self.finland_polygon = get_finland_polygon()
+
 
     def refresh_data(self):
         wipe_data()

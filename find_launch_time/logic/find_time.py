@@ -161,7 +161,8 @@ class FindTime:
 
 
 if __name__ == "__main__":
-    get_prediction_geometries(
+    time_finder = FindTime(debug=True)
+    time_finder.get_prediction_geometries(
         prediction_window_length=timedelta(days=10),
         launch_time_increment=timedelta(days=1),
     )
