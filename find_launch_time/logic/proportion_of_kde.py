@@ -39,7 +39,7 @@ def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
     print(f"kde geometry bounds: {poly_in_crs(simplified_kde_geometry, processing_crs, human_crs).bounds}")
     bad_landing_sindex = data_loader.get_bad_landing_sindex(processing_crs)
     intersecting = bad_landing_sindex.query(simplified_kde_geometry, predicate="intersects")
-    if not intersecting:
+    if not intersecting.size:
         return None
     intersection_gdf = data_loader.bad_landing_gs.iloc[intersecting].copy()
     return intersection_gdf
