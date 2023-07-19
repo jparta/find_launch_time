@@ -8,7 +8,7 @@ from shapely.geometry import Polygon, Point
 
 from .config import processing_crs, human_crs, bbox
 from .proportion_of_kde import get_enhanced_ensemble_outputs
-from .load_data import get_finland_polygon
+from .load_data import DataLoader
 
 
 def get_sampled_points(count, mean, crs, cov=None) -> gpd.GeoDataFrame:
@@ -19,10 +19,10 @@ def get_sampled_points(count, mean, crs, cov=None) -> gpd.GeoDataFrame:
     points_gdf = gpd.GeoDataFrame(geometry=gpd.points_from_xy(points[:, 0], points[:, 1]), crs=crs)
     return points_gdf
 
-def get_means(n=1):
+def get_means(data_loader: DataLoader, n=1):
     # random points in Finland
     dist_mean_points: list[Point] = []
-    finland_polygon = get_finland_polygon()
+    finland_polygon = data_loader.finland_polygon
 
     while len(dist_mean_points) < n:
         # generate random point in Finland
@@ -50,12 +50,13 @@ def how_close_points_are_in_polygon(gdf):
 
 def main():
     count_samples = 10000
-    means = get_means()
+    data_loader = DataLoader()
+    means = get_means(data_loader=data_loader)
     for mean in means:
         mean_point = Point(mean.x, mean.y)
         mean_in_processing_crs = gpd.GeoDataFrame(geometry=[mean_point], crs=human_crs).to_crs(processing_crs).geometry.values[0].coords[0]
         points = get_sampled_points(count_samples, mean_in_processing_crs, processing_crs)
-        proportion_of_bad_landing = get_enhanced_ensemble_outputs(points_gdf=points)
+        proportion_of_bad_landing = get_enhanced_ensemble_outputs(points_gdf=points, data_loader=data_loader).proportion_of_bad_landing_to_kde
         print(f"proportion of bad landing: {proportion_of_bad_landing}")
 
 if __name__ == '__main__':
