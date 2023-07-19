@@ -138,17 +138,15 @@ def get_prediction_geometries(
     """Get the geometries of the predicted landing sites for the next 10 days."""
     launch_time_max = launch_time_min + prediction_window_length
     launch_time = launch_time_min
-    geometries: list[EnhancedEnsembleOutputs] = []
     while launch_time <= launch_time_max:
         output_path = make_output_path()
-        run_sims(launch_time, output_path)
+        run_sims(launch_time, output_path, debug)
         predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
         enhanced_outputs = get_enhanced_ensemble_outputs(predicted_landing_sites)
         print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
         #pprint(enhanced_outputs.to_dict())
-        geometries.append(enhanced_outputs)
+        yield enhanced_outputs
         launch_time = launch_time + launch_time_increment
-    return geometries
 
 
 if __name__ == "__main__":
