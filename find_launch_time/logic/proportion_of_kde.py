@@ -52,9 +52,9 @@ def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> Enhanc
     and the bad landing polys within the KDE.
     """
     shared_crs = processing_crs
-    kde_gdf = kde_gdf_from_points(points_gdf).to_crs(shared_crs)
-    bad_landing_in_kde = bad_landing_intersecting_with_kde(kde_gdf, data_loader)
-    proportion_of_bad_landing_to_whole = (bad_landing_in_kde.to_crs(shared_crs).area.sum() / kde_gdf.area.sum()
+    kde = kde_gdf_from_points(points_gdf).to_crs(shared_crs)
+    bad_landing_in_kde = bad_landing_intersecting_with_kde(kde, data_loader)
+    proportion_of_bad_landing_to_whole = (bad_landing_in_kde.to_crs(shared_crs).area.sum() / kde.area.sum()
                                          if bad_landing_in_kde is not None else 0)
     """
     plot_kde_and_bad_landing_polys(
@@ -64,17 +64,17 @@ def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> Enhanc
         points=points_gdf
     )
     """
-    if (not isinstance(bad_landing_in_kde, (gpd.GeoDataFrame, type(None)))
-        or not isinstance(kde_gdf, gpd.GeoDataFrame)):
+    if (not isinstance(bad_landing_in_kde, (gpd.GeoDataFrame, gpd.GeoSeries, type(None)))
+        or not isinstance(kde, (gpd.GeoDataFrame, gpd.GeoSeries))):
         error_string = f"""\
-            bad_landing_in_kde and kde_gdf must be (GeoDataFrames or None)
-            and GeoDataFrames respectively, not {type(bad_landing_in_kde)} and {type(kde_gdf)}
+            bad_landing_in_kde and kde_gdf type requirements not met,
+            got {type(bad_landing_in_kde)} and {type(kde)}
         """
         raise ValueError(error_string)
     enhanced_outputs = EnhancedEnsembleOutputs(
         bad_landing_areas=bad_landing_in_kde,
         predicted_landing_sites=points_gdf,
-        kde=kde_gdf,
+        kde=kde,
         proportion_of_bad_landing_to_kde=proportion_of_bad_landing_to_whole
     )
     return enhanced_outputs
