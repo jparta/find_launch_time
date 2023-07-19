@@ -1,8 +1,13 @@
 
+- Create a stateful object which has reference to pre-loaded data
 
 - Fix error in fetching weather data
     * The way errors are caught in ASTRA is probably masking what is really going on
+
 - Treat water and other countries the same way as built areas
+
 - Make intersection faster by using Shapely STRTree
+
 - Use launch temperature from weather prediction for simulation input
+
 - Pre-download weather forecasts
