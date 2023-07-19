@@ -90,6 +90,7 @@ def get_predicted_landing_sites(astra_flight_json_filepath: Path):
 def run_sims(
     launch_time: datetime,
     output_path: Path,
+    debug: bool,
 ):
     launch_coords_possibilities = {
         "Kartanonrannan_koulu": (60.153144, 24.551671),
@@ -114,7 +115,7 @@ def run_sims(
         train_equiv_sphere_diam=flight_train_equiv_sphere_diam,
         output_path=output_path,
         output_formats=output_formats,
-        debugging=False,
+        debugging=debug,
     )
     print(f"launch params: {pformat(launch_params)}")
     print(f"flight params: {pformat(flight_params)}")
@@ -128,11 +129,11 @@ def run_sims(
     return predicted_landing_sites
 
 
-
 def get_prediction_geometries(
     prediction_window_length: timedelta,
     launch_time_increment: timedelta,
-    launch_time_min: datetime=datetime.now(timezone.utc)
+    launch_time_min: datetime=datetime.now(timezone.utc),
+    debug: bool = False,
 ):
     """Get the geometries of the predicted landing sites for the next 10 days."""
     launch_time_max = launch_time_min + prediction_window_length
