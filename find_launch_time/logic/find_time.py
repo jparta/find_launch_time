@@ -20,7 +20,8 @@ from .load_data import DataLoader
 from .proportion_of_kde import EnhancedEnsembleOutputs, get_enhanced_ensemble_outputs
 
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def make_launch_params(
@@ -134,6 +135,8 @@ class FindTime:
     def __init__(self, debug: bool = False):
         self.debug = debug
         self.data_loader = DataLoader()
+        if debug:
+            logger.setLevel(logging.DEBUG)
 
     def get_prediction_geometries(
         self,
