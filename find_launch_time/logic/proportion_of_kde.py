@@ -41,8 +41,8 @@ def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
     intersecting = bad_landing_sindex.query(simplified_kde_geometry, predicate="intersects")
     if not intersecting.size:
         return None
-    intersection_gdf = data_loader.bad_landing_gs.iloc[intersecting].copy()
-    return intersection_gdf
+    intersection_gs = data_loader.bad_landing_gs.iloc[intersecting].intersection(kde_geometry)
+    return intersection_gs
 
 
 def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> EnhancedEnsembleOutputs:
