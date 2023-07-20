@@ -159,8 +159,9 @@ class FindTime:
             run_sims(launch_time, output_path, self.debug, self.reqsession)
             predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
             enhanced_outputs = get_enhanced_ensemble_outputs(
-                predicted_landing_sites,
-                self.data_loader,
+                launch_time=launch_time,
+                points_gdf=predicted_landing_sites,
+                data_loader=self.data_loader,
             )
             print(f"proportion of bad landing area: {enhanced_outputs.proportion_of_bad_landing_to_kde}")
             yield enhanced_outputs

@@ -1,4 +1,5 @@
 import dataclasses
+from datetime import datetime
 from pprint import pprint
 import geopandas as gpd
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from .utils import get_single_geometry, poly_in_crs
 @dataclass
 class EnhancedEnsembleOutputs:
     """The outputs of the sims, enhanced by KDE computation and comparison with bad landing polygons."""
+    launch_time: datetime
     bad_landing_areas: gpd.GeoDataFrame | None
     predicted_landing_sites: gpd.GeoDataFrame
     kde: gpd.GeoDataFrame
@@ -45,7 +47,7 @@ def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
     return intersection_gs
 
 
-def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> EnhancedEnsembleOutputs:
+def get_enhanced_ensemble_outputs(launch_time: datetime, points_gdf, data_loader: DataLoader) -> EnhancedEnsembleOutputs:
     """Generate a Kernel Density Estimate (KDE) from the estimated landing location points,
     and compare it with the bad landing polygons. Return the whole package of outputs,
     including the points passed to this function, their KDE, the proportion of bad landing area to KDE area,
@@ -72,6 +74,7 @@ def get_enhanced_ensemble_outputs(points_gdf, data_loader: DataLoader) -> Enhanc
         """
         raise ValueError(error_string)
     enhanced_outputs = EnhancedEnsembleOutputs(
+        launch_time=launch_time,
         bad_landing_areas=bad_landing_in_kde,
         predicted_landing_sites=points_gdf,
         kde=kde,

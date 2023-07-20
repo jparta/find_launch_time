@@ -1,10 +1,12 @@
 import os
+from datetime import datetime, timezone
+from pprint import pprint
 
 os.environ['USE_PYGEOS'] = '0'
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point
 
 from .config import processing_crs, human_crs, bbox
 from .proportion_of_kde import get_enhanced_ensemble_outputs
@@ -56,8 +58,14 @@ def main():
         mean_point = Point(mean.x, mean.y)
         mean_in_processing_crs = gpd.GeoDataFrame(geometry=[mean_point], crs=human_crs).to_crs(processing_crs).geometry.values[0].coords[0]
         points = get_sampled_points(count_samples, mean_in_processing_crs, processing_crs)
-        proportion_of_bad_landing = get_enhanced_ensemble_outputs(points_gdf=points, data_loader=data_loader).proportion_of_bad_landing_to_kde
+        outputs = get_enhanced_ensemble_outputs(
+            launch_time=datetime.now(timezone.utc),
+            points_gdf=points,
+            data_loader=data_loader
+        )
+        proportion_of_bad_landing = outputs.proportion_of_bad_landing_to_kde
         print(f"proportion of bad landing: {proportion_of_bad_landing}")
+        pprint({key: str(val)[:50] for key, val in outputs.to_dict().items()})
 
 if __name__ == '__main__':
     main()
