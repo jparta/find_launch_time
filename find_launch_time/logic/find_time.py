@@ -15,6 +15,7 @@ os.environ['USE_PYGEOS'] = '0'
 
 import geopandas as gpd
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 from .load_data import DataLoader
 from .proportion_of_kde import EnhancedEnsembleOutputs, get_enhanced_ensemble_outputs
@@ -28,12 +29,13 @@ def make_launch_params(
     latitude: float,
     longitude: float,
     launch_time: datetime,
+    session: requests.Session,
 ):
     elevation_dataset = "FABDEM"
     elevation_url = (
         f"https://api.elevationapi.com/api/Elevation?lat={latitude}&lon={longitude}&dataSet={elevation_dataset}"
     )
-    response = requests.get(elevation_url)
+    response = session.get(elevation_url)
     elevation = response.json()["geoPoints"][0]["elevation"]
     return {
         "launchSiteLat": latitude,
@@ -93,6 +95,7 @@ def run_sims(
     launch_time: datetime,
     output_path: Path,
     debug: bool,
+    session: requests.Session,
 ):
     launch_coords_possibilities = {
         "Kartanonrannan_koulu": (60.153144, 24.551671),
@@ -107,7 +110,7 @@ def run_sims(
     parachute = "SFP800"
 
     output_formats = ('json',)
-    launch_params = make_launch_params(*launch_coords, launch_time)
+    launch_params = make_launch_params(*launch_coords, launch_time, session)
     flight_params = make_flight_params(
         balloon=balloon,
         nozzle_lift_kg=nozzle_lift_kg,
@@ -137,6 +140,10 @@ class FindTime:
         self.data_loader = DataLoader()
         if debug:
             logger.setLevel(logging.DEBUG)
+        self.reqsession = requests.Session()
+        retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+        self.reqsession.mount('http://', HTTPAdapter(max_retries=retries))
+        self.reqsession.mount('https://', HTTPAdapter(max_retries=retries))
 
     def get_prediction_geometries(
         self,
@@ -149,7 +156,7 @@ class FindTime:
         launch_time = launch_time_min
         while launch_time <= launch_time_max:
             output_path = make_output_path()
-            run_sims(launch_time, output_path, self.debug)
+            run_sims(launch_time, output_path, self.debug, self.reqsession)
             predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
             enhanced_outputs = get_enhanced_ensemble_outputs(
                 predicted_landing_sites,
