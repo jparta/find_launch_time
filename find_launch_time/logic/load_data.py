@@ -11,7 +11,7 @@ import pyrosm
 import requests
 from shapely.geometry import Polygon, box
 
-from .config import human_crs, processing_crs, bad_landing_tags, bad_landing_tags_lists, geofabrik_osm_column_types, bbox
+from .config import human_crs, processing_crs, bad_landing_tags, geofabrik_osm_column_types
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,9 @@ logger.setLevel(logging.INFO)
 
 
 data_location = Path(__file__).parent.parent / "data"
-data_location.mkdir(exist_ok=True)
+def init_data_dir():
+    data_location.mkdir(exist_ok=True)
+init_data_dir()
 
 data_files = {
     "admin_0_countries_zip_filepath" : data_location / "ne_110m_admin_0_countries.zip",
@@ -229,6 +231,7 @@ def get_finland_polygon() -> Polygon:
 class DataLoader:
     def __init__(self, debug: bool = False) -> None:
         self.bad_landing_sindex_by_crs = {}
+        init_data_dir()
         self.load_data()
         if debug:
             logger.setLevel(logging.DEBUG)
@@ -254,5 +257,6 @@ class DataLoader:
 
     def refresh_data(self):
         wipe_data()
+        init_data_dir()
         self.load_data()
 
