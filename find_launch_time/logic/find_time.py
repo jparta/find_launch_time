@@ -93,6 +93,7 @@ def get_predicted_landing_sites(astra_flight_json_filepath: Path):
 
 def run_sims(
     launch_time: datetime,
+    sim_runs: int,
     output_path: Path,
     debug: bool,
     session: requests.Session,
@@ -104,7 +105,6 @@ def run_sims(
     launch_coords = launch_coords_possibilities["Vantinlaakso"]
     flight_train_mass_kg = 0.604
     flight_train_equiv_sphere_diam = 0.285
-    sim_runs = 5
     balloon = "SFB800"
     nozzle_lift_kg = 1.6
     parachute = "SFP800"
@@ -150,13 +150,20 @@ class FindTime:
         prediction_window_length: timedelta,
         launch_time_increment: timedelta,
         launch_time_min: datetime=datetime.now(timezone.utc),
+        sims_per_launch_time: int=2,
     ):
         """Get the geometries of the predicted landing sites for the next 10 days."""
         launch_time_max = launch_time_min + prediction_window_length
         launch_time = launch_time_min
         while launch_time <= launch_time_max:
             output_path = make_output_path()
-            run_sims(launch_time, output_path, self.debug, self.reqsession)
+            run_sims(
+                launch_time,
+                sims_per_launch_time,
+                output_path,
+                self.debug,
+                self.reqsession
+            )
             predicted_landing_sites = get_predicted_landing_sites(output_path / "out.json")
             enhanced_outputs = get_enhanced_ensemble_outputs(
                 launch_time=launch_time,
