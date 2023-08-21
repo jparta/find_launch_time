@@ -171,6 +171,7 @@ def sqlite_to_geodataframe(sqlite_filepath: Path) -> gpd.GeoDataFrame:
 
 
 def get_osm_in_feather_form():
+    logger.info("Getting osm data in feather form")
     osm_pbf_filepath = data_files['osm_pbf']
     if not (osm_pbf_filepath and Path(osm_pbf_filepath).exists()):
         osm_pbf_filepath = pyrosm.get_data("Finland", directory=data_location, update=True)
