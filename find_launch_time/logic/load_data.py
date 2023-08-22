@@ -29,7 +29,7 @@ data_files = {
     "admin_0_countries_shp_filepath": data_location / "ne_110m_admin_0_countries" / "ne_110m_admin_0_countries.shp",
     "seas_polygons_zip_filepath": data_location / "water-polygons-split-4326.zip",
     "seas_polygons_unzipped_filepath": data_location / "water-polygons-split-4326",
-    "seas_polygons_shp_filepath": data_location / "water-polygons-split-4326" / "water_polygons.shp",
+    "seas_polygons_shp_filepath": data_location / "water-polygons-split-4326" / "water-polygons-split-4326" / "water_polygons.shp",
     "osm_pbf": None,
     "osm_sqlite": data_location / "osm.sqlite",
     "osm_feather": data_location / "osm.feather",
@@ -156,7 +156,7 @@ def download_and_unzip_countries():
     logger.info(f"Got countries shapefile from {countries_110m_url} and unzipped to {destination}")
 
 
-def download_and_prepare_seas_shapefile():
+def download_and_unzip_seas_shapefile():
     destination = data_files["seas_polygons_unzipped_filepath"]
     if destination is not None and destination.exists():
         logger.info(f"countries shapefile already unzipped to {destination}")
@@ -213,7 +213,7 @@ def get_osm_in_feather_form():
 def download_and_prepare_data():
     download_and_unzip_countries()
     get_osm_in_feather_form()
-    download_and_prepare_seas_shapefile()
+    download_and_unzip_seas_shapefile()
     if not data_ready():
         raise RuntimeError("Data not ready even though it should be.")
 
