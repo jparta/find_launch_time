@@ -27,6 +27,9 @@ data_files = {
     "admin_0_countries_zip_filepath" : data_location / "ne_110m_admin_0_countries.zip",
     "admin_0_countries_unzipped_filepath": data_location / "ne_110m_admin_0_countries",
     "admin_0_countries_shp_filepath": data_location / "ne_110m_admin_0_countries" / "ne_110m_admin_0_countries.shp",
+    "seas_polygons_zip_filepath": data_location / "water-polygons-split-4326.zip",
+    "seas_polygons_unzipped_filepath": data_location / "water-polygons-split-4326",
+    "seas_polygons_shp_filepath": data_location / "water-polygons-split-4326" / "water_polygons.shp",
     "osm_pbf": None,
     "osm_sqlite": data_location / "osm.sqlite",
     "osm_feather": data_location / "osm.feather",
@@ -35,7 +38,26 @@ data_files = {
 data_files_needed = [
     "admin_0_countries_shp_filepath",
     "osm_feather",
+    "seas_polygons_shp_filepath",
 ]
+
+
+def wipe_data():
+    try:
+        shutil.rmtree(data_location)
+    except FileNotFoundError:
+        pass
+
+
+def data_ready() -> bool:
+    for data_file_key in data_files_needed:
+        filepath_raw = data_files[data_file_key]
+        if filepath_raw is None:
+            return False
+        filepath_obj = Path(filepath_raw)
+        if not filepath_obj.exists():
+            return False
+    return True
 
 
 def apply_tag_conditions(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -116,38 +138,36 @@ def log_sqlite_table_size(sqlite_filepath: Path, table_name: str):
     logger.info(f"table {table_name} has {cursor.fetchone()[0]} rows")
 
 
-def wipe_data():
-    try:
-        shutil.rmtree(data_location)
-    except FileNotFoundError:
-        pass
-
-
-def data_ready() -> bool:
-    for data_file in data_files_needed:
-        filepath_raw = data_files[data_file]
-        if filepath_raw is None:
-            return False
-        filepath_obj = Path(filepath_raw)
-        if not filepath_obj.exists():
-            return False
-    return True
-
-
 def download_and_unzip_countries():
+    destination = data_files["admin_0_countries_unzipped_filepath"]
+    if destination is not None and destination.exists():
+        logger.info(f"countries shapefile already unzipped to {destination}")
+        return
     countries_110m_url = "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
     countries_110m_zip_filepath = data_files["admin_0_countries_zip_filepath"]
-    if countries_110m_zip_filepath.exists():
-        logger.info(f"countries shapefile already downloaded to {countries_110m_zip_filepath}")
-        return
     resp = requests.get(countries_110m_url)
     resp.raise_for_status()
     with open(countries_110m_zip_filepath, 'wb') as f:
         f.write(resp.content)
-    destination = data_files["admin_0_countries_unzipped_filepath"]
     with ZipFile(countries_110m_zip_filepath, 'r') as zip_ref:
         zip_ref.extractall(destination)
     logger.info(f"Got countries shapefile from {countries_110m_url} and unzipped to {destination}")
+
+
+def download_and_prepare_seas_shapefile():
+    destination = data_files["seas_polygons_unzipped_filepath"]
+    if destination is not None and destination.exists():
+        logger.info(f"countries shapefile already unzipped to {destination}")
+        return
+    seas_url = "https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip"
+    seas_zip_filepath = data_files["seas_polygons_zip_filepath"]
+    resp = requests.get(seas_url)
+    resp.raise_for_status()
+    with open(seas_zip_filepath, 'wb') as f:
+        f.write(resp.content)
+    with ZipFile(seas_zip_filepath, 'r') as zip_ref:
+        zip_ref.extractall(destination)
+    logger.info(f"Got seas polygons shapefile from {seas_url} and unzipped to {destination}")
 
 
 def sqlite_to_geodataframe(sqlite_filepath: Path) -> gpd.GeoDataFrame:
@@ -171,14 +191,13 @@ def sqlite_to_geodataframe(sqlite_filepath: Path) -> gpd.GeoDataFrame:
 
 
 def get_osm_in_feather_form():
+    if data_files['osm_feather'].exists():
+        logger.info(f"osm feather file already exists at {data_files['osm_feather']}")
+        return
     logger.info("Getting osm data in feather form")
-    osm_pbf_filepath = data_files['osm_pbf']
-    if not (osm_pbf_filepath and Path(osm_pbf_filepath).exists()):
-        osm_pbf_filepath = pyrosm.get_data("Finland", directory=data_location, update=True)
-        data_files['osm_pbf'] = osm_pbf_filepath
-        logger.info(f"Downloaded osm_pbf to {osm_pbf_filepath}")
-    else:
-        logger.info(f"Using existing osm_pbf_filepath: {osm_pbf_filepath}")
+    osm_pbf_filepath = pyrosm.get_data("Finland", directory=data_location, update=True)
+    data_files['osm_pbf'] = osm_pbf_filepath
+    logger.info(f"Downloaded osm_pbf to {osm_pbf_filepath}")
     # convert to sqlite using ogr2ogr
     osm_sqlite_filepath = data_files['osm_sqlite']
     command = f"ogr2ogr -f SQLite -lco FORMAT=WKT {osm_sqlite_filepath} {osm_pbf_filepath}"
@@ -192,15 +211,12 @@ def get_osm_in_feather_form():
 def download_and_prepare_data():
     download_and_unzip_countries()
     get_osm_in_feather_form()
+    download_and_prepare_seas_shapefile()
     if not data_ready():
         raise RuntimeError("Data not ready even though it should be.")
 
 
 def load_osm_bad_landing_data() -> gpd.GeoSeries:
-    if not data_ready():
-        logger.info("Data not ready. Getting files now")
-        download_and_prepare_data()
-        logger.info("Data ready")
     osm_feather_filepath = data_files['osm_feather']
 
     gdf = gpd.read_feather(osm_feather_filepath)
@@ -217,7 +233,30 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
     return output_gs
 
 
-def get_finland_polygon() -> Polygon:
+def load_seas_bad_landing_data() -> gpd.GeoSeries:
+    seas_bad_landing_shp_filepath = data_files['seas_bad_landing_shp_filepath']
+    seas = gpd.read_file(seas_bad_landing_shp_filepath)
+    finland_geometry = get_finland_gs()
+    seas = seas[seas.intersects(finland_geometry)]
+    return seas
+
+
+def load_bad_landing_data() -> gpd.GeoSeries:
+    if not data_ready():
+        logger.info("Data not ready. Getting files now")
+        download_and_prepare_data()
+        logger.info("Data ready")
+    from_osm_polys = load_osm_bad_landing_data()
+    from_seas_polys = load_seas_bad_landing_data()
+    shared_crs = from_osm_polys.crs
+    if not shared_crs == from_seas_polys.crs:
+        from_seas_polys = from_seas_polys.to_crs(shared_crs)
+    df = pd.concat([from_osm_polys.geometry, from_seas_polys.geometry])
+    return gpd.GeoSeries(df, crs=shared_crs)
+
+
+def get_finland_gs() -> Polygon:
+    gpd.GeoDataFrame().geometry
     if not data_ready():
         logger.info("Data not ready. Getting files now")
         download_and_prepare_data()
@@ -225,8 +264,9 @@ def get_finland_polygon() -> Polygon:
     # Load Finland as a polygon
     admin_0_countries_filepath = data_files['admin_0_countries_shp_filepath']
     world = gpd.read_file(admin_0_countries_filepath)
+    crs = world.crs
     finland_polygon = world[world.ADMIN == "Finland"].geometry.values[0]
-    return finland_polygon
+    return gpd.GeoSeries([finland_polygon], crs=crs)
 
 
 class DataLoader:
@@ -244,12 +284,12 @@ class DataLoader:
         self.bad_landing_sindex_by_crs[crs] = sindex
 
     def load_data(self):
-        self.bad_landing_gs = load_osm_bad_landing_data().to_crs(processing_crs)
+        self.bad_landing_gs = load_bad_landing_data()
         sindex_crs = {processing_crs}
         # Initialize spatial index
         for crs in sindex_crs:
             self.save_bad_landing_sindex(crs)
-        self.finland_polygon = get_finland_polygon()
+        self.finland_gs = get_finland_gs()
 
     def get_bad_landing_sindex(self, crs) -> gpd.GeoSeries:
         if crs not in self.bad_landing_sindex_by_crs:
