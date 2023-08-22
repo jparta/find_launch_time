@@ -273,11 +273,11 @@ def get_finland_gs() -> Polygon:
 
 class DataLoader:
     def __init__(self, debug: bool = False) -> None:
+        if debug:
+            logger.setLevel(logging.DEBUG)
         self.bad_landing_sindex_by_crs = {}
         init_data_dir()
         self.load_data()
-        if debug:
-            logger.setLevel(logging.DEBUG)
 
     def save_bad_landing_sindex(self, crs):
         if crs in self.bad_landing_sindex_by_crs:
