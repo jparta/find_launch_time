@@ -236,8 +236,8 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
 
 
 def load_seas_bad_landing_data() -> gpd.GeoSeries:
-    seas_bad_landing_shp_filepath = data_files['seas_bad_landing_shp_filepath']
-    seas = gpd.read_file(seas_bad_landing_shp_filepath)
+    seas_polygons_shp_filepath = data_files['seas_polygons_shp_filepath']
+    seas = gpd.read_file(seas_polygons_shp_filepath)
     finland_geometry = get_finland_gs()
     seas = seas[seas.intersects(finland_geometry)]
     return seas
