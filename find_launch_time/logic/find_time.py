@@ -137,7 +137,7 @@ def run_sims(
 class FindTime:
     def __init__(self, debug: bool = False):
         self.debug = debug
-        self.data_loader = DataLoader()
+        self.data_loader = DataLoader(debug=debug)
         if debug:
             logger.setLevel(logging.DEBUG)
         self.reqsession = requests.Session()
