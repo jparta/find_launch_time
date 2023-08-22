@@ -53,9 +53,11 @@ def data_ready() -> bool:
     for data_file_key in data_files_needed:
         filepath_raw = data_files[data_file_key]
         if filepath_raw is None:
+            logger.debug(f"Did not find {data_file_key}, value is None")
             return False
         filepath_obj = Path(filepath_raw)
         if not filepath_obj.exists():
+            logger.debug(f"Did not find {data_file_key}, {filepath_obj} is not None but does not exist")
             return False
     return True
 
