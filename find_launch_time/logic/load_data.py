@@ -258,7 +258,6 @@ def load_bad_landing_data() -> gpd.GeoSeries:
 
 
 def get_finland_gs() -> Polygon:
-    gpd.GeoDataFrame().geometry
     if not data_ready():
         logger.info("Data not ready. Getting files now")
         download_and_prepare_data()
