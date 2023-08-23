@@ -173,8 +173,7 @@ def download_unzip_and_prepare_seas_feather():
         zip_ref.extractall(zip_destination)
     logger.info(f"Got seas polygons shapefile from {seas_url} and unzipped to {zip_destination}")
     seas = gpd.read_file(data_files['seas_polygons_shp_filepath'])
-    finland_geometry = get_finland_gs()
-    seas = seas[seas.intersects(finland_geometry)]
+    logger.info("Saving seas to feather file")
     seas.to_feather(data_files['seas_polygons_feather_filepath'])
 
 
