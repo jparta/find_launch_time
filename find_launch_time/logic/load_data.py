@@ -253,7 +253,7 @@ def load_bad_landing_data() -> gpd.GeoSeries:
     from_osm_polys = load_osm_bad_landing_data()
     from_seas_polys = load_seas_bad_landing_data()
     shared_crs = from_osm_polys.crs
-    if not shared_crs == from_seas_polys.crs:
+    if not from_seas_polys.crs == shared_crs:
         from_seas_polys = from_seas_polys.to_crs(shared_crs)
     df = pd.concat([from_osm_polys.geometry, from_seas_polys.geometry])
     return gpd.GeoSeries(df, crs=shared_crs)
