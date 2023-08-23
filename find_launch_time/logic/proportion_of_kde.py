@@ -43,7 +43,7 @@ def bad_landing_intersecting_with_kde(kde_poly_gs, data_loader: DataLoader):
     intersecting = bad_landing_sindex.query(simplified_kde_geometry, predicate="intersects")
     if not intersecting.size:
         return None
-    intersection_gs = data_loader.bad_landing_gs.iloc[intersecting].intersection(kde_geometry)
+    intersection_gs = data_loader.bad_landing_gs.to_crs(processing_crs).iloc[intersecting].intersection(kde_geometry)
     return intersection_gs
 
 

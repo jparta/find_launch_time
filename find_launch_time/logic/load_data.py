@@ -287,7 +287,7 @@ class DataLoader:
         self.bad_landing_sindex_by_crs[crs] = sindex
 
     def load_data(self):
-        self.bad_landing_gs = load_bad_landing_data()
+        self.bad_landing_gs = load_bad_landing_data().to_crs(processing_crs)
         sindex_crs = {processing_crs}
         # Initialize spatial index
         for crs in sindex_crs:
