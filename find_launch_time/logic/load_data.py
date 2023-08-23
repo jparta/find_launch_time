@@ -30,6 +30,7 @@ data_files = {
     "seas_polygons_zip_filepath": data_location / "water-polygons-split-4326.zip",
     "seas_polygons_unzipped_filepath": data_location / "water-polygons-split-4326",
     "seas_polygons_shp_filepath": data_location / "water-polygons-split-4326" / "water-polygons-split-4326" / "water_polygons.shp",
+    "seas_polygons_feather_filepath": data_location / "seas.feather",
     "osm_pbf": None,
     "osm_sqlite": data_location / "osm.sqlite",
     "osm_feather": data_location / "osm.feather",
@@ -38,7 +39,7 @@ data_files = {
 data_files_needed = [
     "admin_0_countries_shp_filepath",
     "osm_feather",
-    "seas_polygons_shp_filepath",
+    "seas_polygons_feather_filepath",
 ]
 
 
@@ -114,7 +115,7 @@ def clip_geometry_to_bbox(gdf: gpd.GeoDataFrame, bbox: tuple, bbox_crs: str) -> 
     return clipped_gdf
 
 
-def top_polygons_by_area_info(gdf: gpd.GeoDataFrame, n: int = 10) -> list[float]:
+def top_polygons_by_area_info(gdf: gpd.GeoDataFrame, n: int = 10):
     # add area column
     gdf = gdf.to_crs(processing_crs)
     gdf['m^2_area'] = gdf.area
@@ -156,10 +157,11 @@ def download_and_unzip_countries():
     logger.info(f"Got countries shapefile from {countries_110m_url} and unzipped to {destination}")
 
 
-def download_and_unzip_seas_shapefile():
-    destination = data_files["seas_polygons_unzipped_filepath"]
-    if destination is not None and destination.exists():
-        logger.info(f"countries shapefile already unzipped to {destination}")
+def download_unzip_and_prepare_seas_feather():
+    zip_destination = data_files["seas_polygons_unzipped_filepath"]
+    final_destination = data_files['seas_polygons_feather_filepath']
+    if final_destination is not None and final_destination.exists():
+        logger.info(f"countries feather file already exists in {final_destination}")
         return
     seas_url = "https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip"
     seas_zip_filepath = data_files["seas_polygons_zip_filepath"]
@@ -168,8 +170,12 @@ def download_and_unzip_seas_shapefile():
     with open(seas_zip_filepath, 'wb') as f:
         f.write(resp.content)
     with ZipFile(seas_zip_filepath, 'r') as zip_ref:
-        zip_ref.extractall(destination)
-    logger.info(f"Got seas polygons shapefile from {seas_url} and unzipped to {destination}")
+        zip_ref.extractall(zip_destination)
+    logger.info(f"Got seas polygons shapefile from {seas_url} and unzipped to {zip_destination}")
+    seas = gpd.read_file(data_files['seas_polygons_shp_filepath'])
+    finland_geometry = get_finland_gs()
+    seas = seas[seas.intersects(finland_geometry)]
+    seas.to_feather(data_files['seas_polygons_feather_filepath'])
 
 
 def sqlite_to_geodataframe(sqlite_filepath: Path) -> gpd.GeoDataFrame:
@@ -213,7 +219,7 @@ def get_osm_in_feather_form():
 def download_and_prepare_data():
     download_and_unzip_countries()
     get_osm_in_feather_form()
-    download_and_unzip_seas_shapefile()
+    download_unzip_and_prepare_seas_feather()
     if not data_ready():
         raise RuntimeError("Data not ready even though it should be.")
 
@@ -236,10 +242,7 @@ def load_osm_bad_landing_data() -> gpd.GeoSeries:
 
 
 def load_seas_bad_landing_data() -> gpd.GeoSeries:
-    seas_polygons_shp_filepath = data_files['seas_polygons_shp_filepath']
-    seas = gpd.read_file(seas_polygons_shp_filepath)
-    finland_geometry = get_finland_gs()
-    seas = seas[seas.intersects(finland_geometry)]
+    seas = gpd.read_feather(data_files['seas_polygons_feather_filepath']).geometry
     return seas
 
 
