@@ -91,33 +91,33 @@ def get_predicted_landing_sites(astra_flight_json_filepath: Path):
     return predicted_landing_sites
 
 
+@dataclasses.dataclass
+class LaunchInputs:
+    launch_coords_WGS84: tuple[float, float]
+    flight_train_mass_kg: float
+    flight_train_equiv_sphere_diam: float
+    balloon: str
+    nozzle_lift_kg: float
+    parachute: str
+
+
 def run_sims(
     launch_time: datetime,
+    launch_inputs: LaunchInputs,
     sim_runs: int,
     output_path: Path,
     debug: bool,
     session: requests.Session,
 ):
-    launch_coords_possibilities = {
-        "Kartanonrannan_koulu": (60.153144, 24.551671),
-        "Vantinlaakso": (60.184101, 24.623690)
-    }
-    launch_coords = launch_coords_possibilities["Vantinlaakso"]
-    flight_train_mass_kg = 0.604
-    flight_train_equiv_sphere_diam = 0.285
-    balloon = "SFB800"
-    nozzle_lift_kg = 1.6
-    parachute = "SFP800"
-
     output_formats = ('json',)
-    launch_params = make_launch_params(*launch_coords, launch_time, session)
+    launch_params = make_launch_params(*launch_inputs.launch_coords_WGS84, launch_time, session)
     flight_params = make_flight_params(
-        balloon=balloon,
-        nozzle_lift_kg=nozzle_lift_kg,
-        payload_train_weight_kg=flight_train_mass_kg,
-        parachute=parachute,
+        balloon=launch_inputs.balloon,
+        nozzle_lift_kg=launch_inputs.nozzle_lift_kg,
+        payload_train_weight_kg=launch_inputs.flight_train_mass_kg,
+        parachute=launch_inputs.parachute,
         number_of_sim_runs=sim_runs,
-        train_equiv_sphere_diam=flight_train_equiv_sphere_diam,
+        train_equiv_sphere_diam=launch_inputs.flight_train_equiv_sphere_diam,
         output_path=output_path,
         output_formats=output_formats,
         debugging=debug,
@@ -147,6 +147,7 @@ class FindTime:
 
     def get_prediction_geometries(
         self,
+        launch_inputs: LaunchInputs,
         prediction_window_length: timedelta,
         launch_time_increment: timedelta,
         launch_time_min: datetime=datetime.now(timezone.utc),
@@ -159,6 +160,7 @@ class FindTime:
             output_path = make_output_path()
             run_sims(
                 launch_time,
+                launch_inputs,
                 sims_per_launch_time,
                 output_path,
                 self.debug,
@@ -176,11 +178,3 @@ class FindTime:
 
     def refresh_data(self):
         self.data_loader.refresh_data()
-
-
-if __name__ == "__main__":
-    time_finder = FindTime(debug=True)
-    time_finder.get_prediction_geometries(
-        prediction_window_length=timedelta(days=10),
-        launch_time_increment=timedelta(days=1),
-    )
